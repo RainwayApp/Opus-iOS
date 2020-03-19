@@ -47,10 +47,7 @@ else
 fi
 
 TARGETS="AppleTVOS-arm64 iPhoneOS-arm64 iPhoneOS-armv7 iPhoneSimulator-x86_64"
-
-# # No need to change this since xcode build will only compile in the
-# # necessary bits from the libraries we create
-# ARCHS="i386 x86_64 armv7 armv7s arm64"
+# Not bothering with: i386, armv7s
 
 DEVELOPER=`xcode-select -print-path`
 #DEVELOPER="/Applications/Xcode.app/Contents/Developer"
@@ -100,12 +97,13 @@ else
 fi
 set -e # back to regular "bail out on error" mode
 
-export ORIGINALPATH=$PATH
-
 for TARGET in ${TARGETS}
 do
+    # This splits "AppleTVOS-arm64" into "AppleTVOS" and "arm64":
+    # http://mywiki.wooledge.org/BashFAQ/073?action=show&redirect=ParameterExpansion
     PLATFORM="${TARGET%%-*}"
     ARCH="${TARGET##*-}"
+
     echo
     echo "=== Compiling for $PLATFORM, architecture $ARCH. ==="
     if [ "${PLATFORM}" == "AppleTVOS" ]; then
@@ -156,10 +154,11 @@ for TARGET_OS in ${TARGET_OSES}; do
     INPUT_LIBS=""
     for TARGET in ${TARGETS}; do
         PLATFORM="${TARGET%%-*}"
+        ARCH="${TARGET##*-}"
         if [[ "${PLATFORM}" != "${TARGET_OS}"* ]]; then
+            # This target doesn't belong to the OS we're building a library for.
             continue
         fi
-        ARCH="${TARGET##*-}"
         if [ "${PLATFORM}" == "AppleTVOS" ]; then
             SDK_VERSION="${TVOS_SDK_VERSION}"
         else
@@ -170,7 +169,7 @@ for TARGET_OS in ${TARGET_OSES}; do
             INPUT_LIBS="${INPUT_LIBS} ${INPUT_ARCH_LIB}"
         fi
     done
-    # Combine the three architectures into a universal library.
+    # Combine the architectures for this OS into a universal library.
     if [ -n "$INPUT_LIBS"  ]; then
         lipo -create $INPUT_LIBS \
         -output "${OUTPUTDIR}/lib/${OUTPUT_LIB}"
